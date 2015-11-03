@@ -1,0 +1,10 @@
+* Im Gehäuse ist es zu warm für den Raum-Temperatursensor. Motor heizt locker auf 34 grad C auf -> herausführen
+* Manchmal hängt der Arduino beim booten! Kurzschluß beim dazugelöteten Stromstecker mit dem Pin vom Reset-Switch am Ethernet board??
+* Gehäuse ist noch nicht zusammengeleimt / geklebt, etc
+* Klingel schleift noch am Gehäuse
+* Motor der Klingel braucht (wg. Schleifen??) zuviel Strom -> Netzwerk geht nicht mehr -> Werte können nicht mehr gelesen oder gesetzt werden!!!
+(done) ?bell=on only works till next check where bell is switched off if alarm==false
+(done) ?busid=.&warnabove=-10 geht nicht, weil der Wert in welchen atoi gelesen wird, ein unsigned ist ---> needs firmwareupdate
+
+* smsd am gw muss ausführlicher getestet werden
+* Halterung für T68 Unterseite Regal 3D drucken
