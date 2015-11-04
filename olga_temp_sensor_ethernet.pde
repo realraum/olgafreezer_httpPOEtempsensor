@@ -51,6 +51,8 @@ OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 #define EEPROM_CURRENT_VERSION 1
 #define EEPROM_ADDR_VERS 0
 #define EEPROM_ADDR_WARN 1
+int last_temperature[MAX_TEMP_SENSORS] = {-9999,-9999};
+float last_temperature[MAX_TEMP_SENSORS] = {-9999,-9999};
 float temperature[MAX_TEMP_SENSORS] = {-9999,-9999};
 float warnabove_threshold[MAX_TEMP_SENSORS] = {9999,9999};
 char const *sensornames[2] = {"OLGA fridge","OLGA room"};
@@ -152,7 +154,7 @@ void checkTempAndWarn() {
   if (bellMode_ != BELL_ALARM)
     return;
   for (uint8_t tid=0; tid < MAX_TEMP_SENSORS; tid++) {
-    if (temperature[tid] > warnabove_threshold[tid])
+    if (temperature[tid] > -9999 && temperature[tid] < 9999 && temperature[tid] > warnabove_threshold[tid])
       warn=true;
   }
   if (warn)

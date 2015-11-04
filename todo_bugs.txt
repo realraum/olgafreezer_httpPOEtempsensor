@@ -1,10 +1,20 @@
-* Im Gehäuse ist es zu warm für den Raum-Temperatursensor. Motor heizt locker auf 34 grad C auf -> herausführen
-* Manchmal hängt der Arduino beim booten! Kurzschluß beim dazugelöteten Stromstecker mit dem Pin vom Reset-Switch am Ethernet board??
-* Gehäuse ist noch nicht zusammengeleimt / geklebt, etc
-* Klingel schleift noch am Gehäuse
-* Motor der Klingel braucht (wg. Schleifen??) zuviel Strom -> Netzwerk geht nicht mehr -> Werte können nicht mehr gelesen oder gesetzt werden!!!
+(done) Im Gehäuse ist es zu warm für den Raum-Temperatursensor. Motor heizt locker auf 34 grad C auf -> herausführen
+(done?) Manchmal hängt der Arduino beim booten! Kurzschluß beim dazugelöteten Stromstecker mit dem Pin vom Reset-Switch am Ethernet board??
+(done) Gehäuse ist noch nicht zusammengeleimt / geklebt, etc
+!!! Motorspannung evtl zu hoch !! (war: Klingel schleift noch am Gehäuse, aber Klingel schleift nicht, Motor hört sich nur schlecht an)
+    --> größerer Widerstand???
+    --> Nochmal Test am USB mit Gehäuse
+!!!! Motor der Klingel braucht (wg. Schleifen??) zuviel Strom -> Netzwerk geht nicht mehr -> Werte können nicht mehr gelesen oder gesetzt werden!!!
+  -> widerstand reduzieren
+  -> Kapazität einbauen..
+  -> Firmware läuft aber weiter.
+  -> stärkeres Netzteil (in meiner Kiste)
+  -> danach geht es aber wieder
 (done) ?bell=on only works till next check where bell is switched off if alarm==false
 (done) ?busid=.&warnabove=-10 geht nicht, weil der Wert in welchen atoi gelesen wird, ein unsigned ist ---> needs firmwareupdate
+* Delay... Erst warnen wenn Temp für x Sekunden überschritten wurde
+* Alarm für 15s pausieren, wenn Tendenz bereits wieder in die richtige Richtung geht
+* Leuten einmal Kurz beim Einschalten.. Warum??
 
 * smsd am gw muss ausführlicher getestet werden
 * Halterung für T68 Unterseite Regal 3D drucken
