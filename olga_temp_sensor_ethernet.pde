@@ -28,7 +28,8 @@
 #define PIN_BELL 8
 #define QBUF_LEN 128
 
-LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+//LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
+LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
 
 // assign a MAC address for the ethernet controller.
 // fill in your address here:
