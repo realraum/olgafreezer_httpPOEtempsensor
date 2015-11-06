@@ -1,3 +1,4 @@
+- button mit intterupts zu muten auf pin 2,3 (attachInterrupt arduino)
 (done) Im Gehäuse ist es zu warm für den Raum-Temperatursensor. Motor heizt locker auf 34 grad C auf -> herausführen
 (done?) Manchmal hängt der Arduino beim booten! Kurzschluß beim dazugelöteten Stromstecker mit dem Pin vom Reset-Switch am Ethernet board??
 (done) Gehäuse ist noch nicht zusammengeleimt / geklebt, etc

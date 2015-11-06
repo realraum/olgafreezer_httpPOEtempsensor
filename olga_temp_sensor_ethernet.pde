@@ -17,16 +17,18 @@
 |  8  | NPN Transistor controlling Alarm Bell |
 |  0  | Serial RX, Shared with FTDI |
 |  1  | Serial TX, Shared with FTDI |
-|  2  | HD47780 Pin 14 |
-|  3  | HD47780 Pin 13 |
-|  4  | HD47780 Pin 12 |
-|  5  | HD47780 Pin 11 |
-|  6  | HD47780 Pin  6 |
-|  7  | HD47780 Pin  4 |
+|  2  | Mute Button, connected via Button to GND |
+|  A5  | HD47780 Pin 14 |
+|  A4  | HD47780 Pin 13 |
+|  A3  | HD47780 Pin 12 |
+|  A2  | HD47780 Pin 11 |
+|  A1  | HD47780 Pin  6 |
+|  A0  | HD47780 Pin  4 |
 */
 
 #define PIN_BELL 8
 #define QBUF_LEN 128
+#define PIN_MUTEBUTTON 2
 
 //LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
 LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
@@ -49,12 +51,14 @@ EthernetServer server(80);
 OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 
 #define MAX_TEMP_SENSORS 2
-#define EEPROM_CURRENT_VERSION 1
+#define EEPROM_CURRENT_VERSION 2
 #define EEPROM_ADDR_VERS 0
-#define EEPROM_ADDR_WARN 1
-uint8_t mute_counter_ = 0;
-float temperature[MAX_TEMP_SENSORS] = {-9999,-9999};
-float warnabove_threshold[MAX_TEMP_SENSORS] = {9999,9999};
+#define EEPROM_ADDR_BELLMUTEDUR 1
+#define EEPROM_ADDR_WARN 2
+volatile uint8_t mute_counter_ = 0;
+uint8_t bell_std_mute_duration_ = 30;
+float temperature[MAX_TEMP_SENSORS] = {-9999, -9999};
+float warnabove_threshold[MAX_TEMP_SENSORS] = {9999, 9999};
 char const *sensornames[2] = {"OLGA fridge","OLGA room"};
 uint8_t temp_sensor_id = 0;
 long lastReadingTime = 0;
@@ -62,8 +66,7 @@ byte readingMode = 0;
 #define BELL_ALARM 0
 #define BELL_FORCEOFF -1
 #define BELL_FORCEON 1
-#define BELL_STD_MUTE_DURATION 30
-int8_t bellMode_ = 0;
+volatile int8_t bellMode_ = 0;
 
 
 char *ftoa(char *a, double f, int precision)
@@ -94,6 +97,15 @@ void eeprom_update_block (const void *__src, void *__dst, size_t __n)
   }
 }
 
+void muteButtonPressed()
+{
+  bellMode_ = BELL_ALARM;
+  if (mute_counter_ == 0) {
+    mute_counter_ = bell_std_mute_duration_;
+    digitalWrite(PIN_BELL, LOW);
+  }
+}
+
 void setup() {
   // start the Ethernet connection and the server:
   Ethernet.begin(mac, ip);
@@ -102,18 +114,21 @@ void setup() {
   // initalize the  data ready and chip select pins: 
   pinMode(PIN_BELL, OUTPUT);
   digitalWrite(PIN_BELL, LOW);
+  pinMode(PIN_MUTEBUTTON, INPUT);
+  digitalWrite(PIN_MUTEBUTTON, HIGH); //pullup
+
+  //attachInterrupt(digitalPinToInterrupt(PIN_MUTEBUTTON), muteButtonPressed, FALLING);
+  attachInterrupt(0, muteButtonPressed, FALLING);  //PIN2 should be Interrupt 0
 
   Serial.begin(9600);
 
   if (eeprom_read_byte(EEPROM_ADDR_VERS) == EEPROM_CURRENT_VERSION) {
+    bell_std_mute_duration_ = (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_BELLMUTEDUR);
     eeprom_read_block((void*)&warnabove_threshold, (void*)EEPROM_ADDR_WARN, sizeof(float)*MAX_TEMP_SENSORS);
- //   warnabove_threshold = eeprom_read_dword(4+sizeof(float));
- //   warnabove_threshold[1] = eeprom_read_dword(4+2*sizeof(float));
   } else {
     eeprom_write_block((void*)&warnabove_threshold, (void*)EEPROM_ADDR_WARN, sizeof(float)*MAX_TEMP_SENSORS);
-    //eeprom_write_float(4+sizeof(float), warnabove_threshold[0]);
-    //eeprom_write_float(4+2*sizeof(float), warnabove_threshold[1]);
-    eeprom_write_byte(EEPROM_ADDR_VERS, EEPROM_CURRENT_VERSION);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_BELLMUTEDUR, bell_std_mute_duration_);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_VERS, EEPROM_CURRENT_VERSION);
   }
 
   lcd.begin(20, 4);
@@ -149,6 +164,7 @@ void loop() {
 
 void checkTempAndWarn() {
   bool warn=false;
+
   if (bellMode_ != BELL_ALARM)
     return;
   for (uint8_t tid=0; tid < MAX_TEMP_SENSORS; tid++) {
@@ -183,12 +199,24 @@ void displayTempOnLCD() {
   lcd.print(":");
   lcd.print(sensornames[temp_sensor_id]);
   lcd.setCursor(0,1);
-  lcd.print("Alarm ");
-  if (warnabove_threshold[temp_sensor_id] == 9999) {
-    lcd.print("OFF");
-  } else {
-    lcd.print("@");
-    lcd.print(warnabove_threshold[temp_sensor_id]);
+  if (temperature[temp_sensor_id] != -9999 && temperature[temp_sensor_id] > warnabove_threshold[temp_sensor_id])
+  {
+    if (mute_counter_ > 0)
+    {
+      lcd.print("BELL Muted ");
+      lcd.print(mute_counter_);
+    } else {
+      lcd.print("!OVERTEMP!ALARM!");
+    }
+  } else
+  {
+    lcd.print("Alarm ");
+    if (warnabove_threshold[temp_sensor_id] == 9999) {
+      lcd.print("OFF");
+    } else {
+      lcd.print("@");
+      lcd.print(warnabove_threshold[temp_sensor_id]);
+    }
   }
   render_big_msg("$C", 13,0);
   render_big_msg(tmp, 0,2);
@@ -375,13 +403,16 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
       digitalWrite(PIN_BELL, LOW);
     } else if ( strncmp(requestContent + 5, "mute", 4) == 0 )
     {
-      bellMode_ = BELL_ALARM;
-      mute_counter_ = BELL_STD_MUTE_DURATION;
+      muteButtonPressed();
     } else {
       bellMode_ = BELL_ALARM;
       mute_counter_ = 0;
       //bell is controlled by checkTempAndWarn()
     }
+  } else if (strncmp(requestContent, "muteduration=", 13) == 0)
+  {
+    char* nexttok = strtok(requestContent+13,"& \n\r");
+    bell_std_mute_duration_ = (uint8_t) atoi(nexttok);
   } else if (strncmp(requestContent, "busid=", 6) == 0)
   {
     char* nexttok = strtok(requestContent+6,"& \n\r");
@@ -413,7 +444,7 @@ void httpReplyTempValuesJson(EthernetClient & client) {
   client.println("Connection: close");
   client.println();
   // print the current readings, in HTML format:
-  client.print("[");
+  client.print("{\"sensors\":[");
   for (uint8_t tid=0; tid < MAX_TEMP_SENSORS; tid++) {
     client.print("{\"temp\": ");
     if (temperature[tid] == -9999) {
@@ -435,7 +466,9 @@ void httpReplyTempValuesJson(EthernetClient & client) {
     if (tid < MAX_TEMP_SENSORS -1)
       client.print(", ");
   }
-  client.print("]");
+  client.print("],\"config\":{\"muteduration\":");
+  client.print(bell_std_mute_duration_);
+  client.print("}}");
 }
 
 void listenForEthernetClients() {
