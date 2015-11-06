@@ -51,8 +51,7 @@ OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 #define EEPROM_CURRENT_VERSION 1
 #define EEPROM_ADDR_VERS 0
 #define EEPROM_ADDR_WARN 1
-int last_temperature[MAX_TEMP_SENSORS] = {-9999,-9999};
-float last_temperature[MAX_TEMP_SENSORS] = {-9999,-9999};
+uint8_t mute_counter_ = 0;
 float temperature[MAX_TEMP_SENSORS] = {-9999,-9999};
 float warnabove_threshold[MAX_TEMP_SENSORS] = {9999,9999};
 char const *sensornames[2] = {"OLGA fridge","OLGA room"};
@@ -62,9 +61,8 @@ byte readingMode = 0;
 #define BELL_ALARM 0
 #define BELL_FORCEOFF -1
 #define BELL_FORCEON 1
+#define BELL_STD_MUTE_DURATION 30
 int8_t bellMode_ = 0;
-
-
 
 
 char *ftoa(char *a, double f, int precision)
@@ -94,7 +92,6 @@ void eeprom_update_block (const void *__src, void *__dst, size_t __n)
     _myDstPtr++, _mySrcPtr++;
   }
 }
-
 
 void setup() {
   // start the Ethernet connection and the server:
@@ -159,10 +156,14 @@ void checkTempAndWarn() {
   }
   if (warn)
   {
-    digitalWrite(PIN_BELL, HIGH); 
+    if (mute_counter_ > 0)
+      mute_counter_--;
+    else
+      digitalWrite(PIN_BELL, HIGH);
   } else
   {
     digitalWrite(PIN_BELL, LOW);
+    mute_counter_ = 0;
   }
 }
 
@@ -371,8 +372,13 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
     {
       bellMode_ = BELL_FORCEOFF;
       digitalWrite(PIN_BELL, LOW);
+    } else if ( strncmp(requestContent + 5, "mute", 4) == 0 )
+    {
+      bellMode_ = BELL_ALARM;
+      mute_counter_ = BELL_STD_MUTE_DURATION;
     } else {
       bellMode_ = BELL_ALARM;
+      mute_counter_ = 0;
       //bell is controlled by checkTempAndWarn()
     }
   } else if (strncmp(requestContent, "busid=", 6) == 0)
