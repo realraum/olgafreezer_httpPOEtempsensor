@@ -104,6 +104,8 @@ void muteButtonPressed()
     mute_counter_ = bell_std_mute_duration_;
     digitalWrite(PIN_BELL, LOW);
   }
+  lcd_clear();
+  lcd.print(F("Mute Button Pressed"));
 }
 
 void setup() {
@@ -131,12 +133,14 @@ void setup() {
     eeprom_write_byte((uint8_t *) EEPROM_ADDR_VERS, EEPROM_CURRENT_VERSION);
   }
 
+  oneWireSearchAndStartConversion();
+
   lcd.begin(20, 4);
   lcd.clear();
-  lcd.print("OLGA Fridge         ");
-  lcd.print("(c) 2015            ");
-  lcd.print("         Temp Sensor");
-  lcd.print(" Bernhard Tittelbach");
+  lcd.print(F("OLGA Fridge         "));
+  lcd.print(F("(c) 2015            "));
+  lcd.print(F("         Temp Sensor"));
+  lcd.print(F(" Bernhard Tittelbach"));
 
   // give the sensor and Ethernet shield time to set up:
   delay(3000);
@@ -165,12 +169,15 @@ void loop() {
 void checkTempAndWarn() {
   bool warn=false;
 
-  if (bellMode_ != BELL_ALARM)
-    return;
-  for (uint8_t tid=0; tid < MAX_TEMP_SENSORS; tid++) {
-    if (temperature[tid] > -9999 && temperature[tid] < 9999 && temperature[tid] > warnabove_threshold[tid])
+  if (bellMode_ == BELL_FORCEON)
+    warn=true;
+  else if (bellMode_ == BELL_FORCEOFF)
+    warn=false;
+  else for (uint8_t tid=0; tid < MAX_TEMP_SENSORS; tid++) {
+    if (temperature[tid] != -9999 && temperature[tid] > warnabove_threshold[tid])
       warn=true;
   }
+
   if (warn)
   {
     if (mute_counter_ > 0)
@@ -196,25 +203,25 @@ void displayTempOnLCD() {
   tmp[5] = 0;
   lcd_clear();
   lcd.print(temp_sensor_id);
-  lcd.print(":");
+  lcd.print(F(":"));
   lcd.print(sensornames[temp_sensor_id]);
   lcd.setCursor(0,1);
   if (temperature[temp_sensor_id] != -9999 && temperature[temp_sensor_id] > warnabove_threshold[temp_sensor_id])
   {
     if (mute_counter_ > 0)
     {
-      lcd.print("BELL Muted ");
+      lcd.print(F("BELL Muted "));
       lcd.print(mute_counter_);
     } else {
-      lcd.print("!OVERTEMP!ALARM!");
+      lcd.print(F("!OVERTEMP!!!"));
     }
   } else
   {
-    lcd.print("Alarm ");
+    lcd.print(F("Alarm "));
     if (warnabove_threshold[temp_sensor_id] == 9999) {
-      lcd.print("OFF");
+      lcd.print(F("OFF"));
     } else {
-      lcd.print("@");
+      lcd.print(F("@"));
       lcd.print(warnabove_threshold[temp_sensor_id]);
     }
   }
@@ -229,8 +236,8 @@ byte addr[8];
 byte oneWireSearchAndStartConversion() {
   byte i;
   if ( !ds.search(addr)) {
-    Serial.println("No more addresses.");
-    Serial.println();
+    // Serial.println("No more addresses.");
+    // Serial.println();
     ds.reset_search();
     temp_sensor_id = -1;
     return 0;
@@ -238,35 +245,35 @@ byte oneWireSearchAndStartConversion() {
   temp_sensor_id++;
   temp_sensor_id %= MAX_TEMP_SENSORS;
 
-  Serial.print("ROM =");
-  for( i = 0; i < 8; i++) {
-    Serial.write(' ');
-    Serial.print(addr[i], HEX);
-  }
+  // Serial.print("ROM =");
+  // for( i = 0; i < 8; i++) {
+  //   Serial.write(' ');
+  //   Serial.print(addr[i], HEX);
+  // }
 
   if (OneWire::crc8(addr, 7) != addr[7]) {
     temperature[temp_sensor_id] = -9999;
-    Serial.println("CRC is not valid!");
+    // Serial.println("CRC is not valid!");
     return 0;
   }
-  Serial.println();
+  //Serial.println();
  
   // the first ROM byte indicates which chip
   switch (addr[0]) {
     case 0x10:
-      Serial.println("  Chip = DS18S20");  // or old DS1820
+      // Serial.println("  Chip = DS18S20");  // or old DS1820
       type_s = 1;
       break;
     case 0x28:
-      Serial.println("  Chip = DS18B20");
+      // Serial.println("  Chip = DS18B20");
       type_s = 0;
       break;
     case 0x22:
-      Serial.println("  Chip = DS1822");
+      // Serial.println("  Chip = DS1822");
       type_s = 0;
       break;
     default:
-      Serial.println("Device is not a DS18x20 family device.");
+      // Serial.println("Device is not a DS18x20 family device.");
       return 0;
   } 
 
@@ -287,17 +294,17 @@ void getData() {
   ds.select(addr);    
   ds.write(0xBE);         // Read Scratchpad
 
-  Serial.print("  Data = ");
-  Serial.print(present, HEX);
-  Serial.print(" ");
+  // Serial.print("  Data = ");
+  // Serial.print(present, HEX);
+  // Serial.print(" ");
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
     data[i] = ds.read();
-    Serial.print(data[i], HEX);
-    Serial.print(" ");
+    // Serial.print(data[i], HEX);
+    // Serial.print(" ");
   }
-  Serial.print(" CRC=");
-  Serial.print(OneWire::crc8(data, 8), HEX);
-  Serial.println();
+  // Serial.print(" CRC=");
+  // Serial.print(OneWire::crc8(data, 8), HEX);
+  // Serial.println();
 
   // Convert the data to actual temperature
   // because the result is a 16 bit signed integer, it should
@@ -321,13 +328,14 @@ void getData() {
   if (temp_sensor_id >= 0 && temp_sensor_id < MAX_TEMP_SENSORS)
   {
     temperature[temp_sensor_id] = (float)raw / 16.0;
-    Serial.print("  Temperature = ");
-    Serial.print(temperature[temp_sensor_id]);
-    Serial.print(" Celsius, ");
+    // Serial.print("  Temperature = ");
+    // Serial.print(temperature[temp_sensor_id]);
+    // Serial.print(" Celsius, ");
   }
 }
 
 char *pSpDelimiters = " \r\n";
+char *pQueryDelimiters = "& \r\n";
 char *pStxDelimiter = "\002";    // STX - ASCII start of text character
 
 /**********************************************************************************************************************
@@ -387,8 +395,8 @@ char* readRequestLine(EthernetClient & client, char readBuffer[QBUF_LEN], char r
 
 void actOnRequestContent(char requestContent[QBUF_LEN])
 {
-  Serial.print("actOnRequestContent\n");
-  Serial.print(requestContent);
+  // Serial.print("actOnRequestContent\n");
+  // Serial.print(requestContent);
   uint8_t tid=MAX_TEMP_SENSORS;
   int16_t wathint = 9999;
   if (strncmp(requestContent, "bell=", 5) == 0)
@@ -409,20 +417,20 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
       mute_counter_ = 0;
       //bell is controlled by checkTempAndWarn()
     }
-  } else if (strncmp(requestContent, "muteduration=", 13) == 0)
+  } else if (strncmp(requestContent, "mutedur=", 13) == 0)
   {
-    char* nexttok = strtok(requestContent+13,"& \n\r");
+    char* nexttok = strtok(requestContent+13, pQueryDelimiters);
     bell_std_mute_duration_ = (uint8_t) atoi(nexttok);
   } else if (strncmp(requestContent, "busid=", 6) == 0)
   {
-    char* nexttok = strtok(requestContent+6,"& \n\r");
+    char* nexttok = strtok(requestContent+6, pQueryDelimiters);
     tid = atoi(nexttok);
     if (!(tid >= 0 && tid < MAX_TEMP_SENSORS))
       return;
-    nexttok = strtok(NULL, "& \n\r");
+    nexttok = strtok(NULL, pQueryDelimiters);
     if (strncmp(nexttok, "warnabove=", 10) == 0)
     {
-      nexttok = strtok(nexttok+10, "& \n\r");
+      nexttok = strtok(nexttok+10, pQueryDelimiters);
       if (strncmp(nexttok, "off", 3) == 0)
       {
         warnabove_threshold[tid] = 9999;
@@ -439,43 +447,52 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
 
 
 void httpReplyTempValuesJson(EthernetClient & client) {
-  client.println("HTTP/1.1 200 OK");
-  client.println("Content-Type: application/json");
-  client.println("Connection: close");
+  client.println(F("HTTP/1.1 200 OK"));
+  client.println(F("Content-Type: application/json"));
+  client.println(F("Connection: close"));
   client.println();
   // print the current readings, in HTML format:
-  client.print("{\"sensors\":[");
+  client.print(F("{\"sensors\":["));
   for (uint8_t tid=0; tid < MAX_TEMP_SENSORS; tid++) {
-    client.print("{\"temp\": ");
+    client.print(F("{\"temp\": "));
     if (temperature[tid] == -9999) {
-      client.print("\"INVALID\"");
+      client.print(F("\"INVALID\""));
     } else {
       client.print(temperature[tid]);
     }
-    client.print(", \"busid\":");
+    client.print(F(",\"busid\":"));
     client.print(tid);
-    client.print(", \"warnabove\":");
+    client.print(F(", \"warnabove\":"));
     if (warnabove_threshold[tid] == 9999) {
-      client.print("\"OFF\"");
+      client.print(F("\"OFF\""));
     } else {
       client.print(warnabove_threshold[tid]);
     }
-    client.print(", \"scale\":\"degC\", \"desc\":\"");
+    client.print(F(",\"scale\":\"degC\",\"desc\":\""));
     client.print(sensornames[tid]);
-    client.print("\"}");
+    client.print(F("\"}"));
     if (tid < MAX_TEMP_SENSORS -1)
-      client.print(", ");
+      client.print(F(", "));
   }
-  client.print("],\"config\":{\"muteduration\":");
+  client.print(F("],\"config\":{\"mutedur\":"));
   client.print(bell_std_mute_duration_);
-  client.print("}}");
+  client.print(F(",\"bell\":"));
+  if (bellMode_ == BELL_FORCEON)
+    client.print(F("\"ON\""));
+  else if (bellMode_ == BELL_FORCEOFF)
+    client.print(F("\"OFF\""));
+  else if (mute_counter_ > 0)
+    client.print(F("\"muted\""));
+  else
+    client.print(F("\"connected to alarm\""));
+  client.println(F("}}"));
 }
 
 void listenForEthernetClients() {
   // listen for incoming clients
   EthernetClient client = server.available();
   if (client) {
-    Serial.println("Got a client");
+    // Serial.println("Got a client");
     // an http request ends with a blank line
     boolean currentLineIsBlank = true;
     uint8_t linenum = 0;
@@ -488,7 +505,7 @@ void listenForEthernetClients() {
     while (client.connected()) {
       if (client.available()) {
         char c = client.read();
-        Serial.print(c);
+        // Serial.print(c);
         // if you've gotten to the end of the line (received a newline
         // character) and the line is blank, the http request has ended,
         // so you can send a reply
