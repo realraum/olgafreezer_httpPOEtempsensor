@@ -449,6 +449,7 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
 void httpReplyTempValuesJson(EthernetClient & client) {
   client.println(F("HTTP/1.1 200 OK"));
   client.println(F("Content-Type: application/json"));
+  client.println(F("Cache-Control: no-cache"));
   client.println(F("Connection: close"));
   client.println();
   // print the current readings, in HTML format:
