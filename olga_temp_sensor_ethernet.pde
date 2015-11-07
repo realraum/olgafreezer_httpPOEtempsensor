@@ -60,7 +60,7 @@ uint8_t bell_std_mute_duration_ = 30;
 float temperature[MAX_TEMP_SENSORS] = {-9999, -9999};
 float warnabove_threshold[MAX_TEMP_SENSORS] = {9999, 9999};
 char const *sensornames[2] = {"OLGA fridge","OLGA room"};
-uint8_t temp_sensor_id = 0;
+uint8_t temp_sensor_id = -1;
 long lastReadingTime = 0;
 byte readingMode = 0;
 #define BELL_ALARM 0
