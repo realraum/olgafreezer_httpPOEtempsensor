@@ -59,7 +59,7 @@ volatile uint8_t mute_counter_ = 0;
 uint8_t bell_std_mute_duration_ = 30;
 float temperature[MAX_TEMP_SENSORS] = {-9999, -9999};
 float warnabove_threshold[MAX_TEMP_SENSORS] = {9999, 9999};
-char const *sensornames[2] = {"OLGA fridge","OLGA room"};
+char const *sensornames[2] = {"OLGA freezer","OLGA room"};
 uint8_t temp_sensor_id = -1;
 long lastReadingTime = 0;
 byte readingMode = 0;
@@ -469,7 +469,7 @@ void httpReplyTempValuesJson(EthernetClient & client) {
     } else {
       client.print(warnabove_threshold[tid]);
     }
-    client.print(F(",\"scale\":\"degC\",\"desc\":\""));
+    client.print(F(",\"unit\":\"degC\",\"desc\":\""));
     client.print(sensornames[tid]);
     client.print(F("\"}"));
     if (tid < MAX_TEMP_SENSORS -1)

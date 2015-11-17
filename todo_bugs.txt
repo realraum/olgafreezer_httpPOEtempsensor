@@ -1,12 +1,12 @@
-- button mit intterupts zu muten auf pin 2,3 (attachInterrupt arduino)
+(done) button mit intterupts zu muten auf pin 2,3 (attachInterrupt arduino)
 (done) Im Gehäuse ist es zu warm für den Raum-Temperatursensor. Motor heizt locker auf 34 grad C auf -> herausführen
 (done?) Manchmal hängt der Arduino beim booten! Kurzschluß beim dazugelöteten Stromstecker mit dem Pin vom Reset-Switch am Ethernet board??
 (done) Gehäuse ist noch nicht zusammengeleimt / geklebt, etc
-!!! Motorspannung evtl zu hoch !! (war: Klingel schleift noch am Gehäuse, aber Klingel schleift nicht, Motor hört sich nur schlecht an)
+(done) Motorspannung evtl zu hoch !! (war: Klingel schleift noch am Gehäuse, aber Klingel schleift nicht, Motor hört sich nur schlecht an)
     --> größerer Widerstand???
     --> Nochmal Test am USB mit Gehäuse
     --> gehörte NUR GEÖLT !!!
-!!!! Motor der Klingel braucht (wg. Schleifen??) zuviel Strom -> Netzwerk geht nicht mehr -> Werte können nicht mehr gelesen oder gesetzt werden!!!
+(done) Motor der Klingel braucht (wg. Schleifen??) zuviel Strom -> Netzwerk geht nicht mehr -> Werte können nicht mehr gelesen oder gesetzt werden!!!
   -> widerstand reduzieren
   -> Kapazität einbauen..
   -> Firmware läuft aber weiter.
@@ -15,8 +15,9 @@
 (done) ?bell=on only works till next check where bell is switched off if alarm==false
 (done) ?busid=.&warnabove=-10 geht nicht, weil der Wert in welchen atoi gelesen wird, ein unsigned ist ---> needs firmwareupdate
 * Delay... Erst warnen wenn Temp für x Sekunden überschritten wurde
-* Alarm für 15s pausieren, wenn Tendenz bereits wieder in die richtige Richtung geht
-* Leuten einmal Kurz beim Einschalten.. Warum??
+(done) Alarm für 15s pausieren, wenn Tendenz bereits wieder in die richtige Richtung geht
+(done?) Leutet einmal Kurz beim Einschalten.. Warum??
+* startet manchmal nicht, LCD schwarz/weiß. Strom zu beginn??* startet manchmal nicht, LCD schwarz/weiß. Strom zu beginn????
 
 * smsd am gw muss ausführlicher getestet werden
-* Halterung für T68 Unterseite Regal 3D drucken
+(done) Halterung für T68 Unterseite Regal 3D drucken
