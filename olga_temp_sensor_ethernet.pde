@@ -36,10 +36,6 @@ LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
 // assign a MAC address for the ethernet controller.
 // fill in your address here:
 byte mac[] = {0x62,0xac,0x2e,0x6d,0x81,0x12};
-// assign an IP address for the controller:
-IPAddress ip(192,168,33,11);
-IPAddress gateway(192,168,33,1);	
-IPAddress subnet(255, 255, 255, 0);
 
 
 // Initialize the Ethernet server library
@@ -51,10 +47,22 @@ EthernetServer server(80);
 OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 
 #define MAX_TEMP_SENSORS 2
-#define EEPROM_CURRENT_VERSION 2
+#define EEPROM_CURRENT_VERSION 3
 #define EEPROM_ADDR_VERS 0
 #define EEPROM_ADDR_BELLMUTEDUR 1
-#define EEPROM_ADDR_WARN 2
+#define EEPROM_ADDR_IP1 2
+#define EEPROM_ADDR_IP2 3
+#define EEPROM_ADDR_IP3 4
+#define EEPROM_ADDR_IP4 5
+#define EEPROM_ADDR_GW1 6
+#define EEPROM_ADDR_GW2 7
+#define EEPROM_ADDR_GW3 8
+#define EEPROM_ADDR_GW4 9
+#define EEPROM_ADDR_SUBNET1 10
+#define EEPROM_ADDR_SUBNET2 11
+#define EEPROM_ADDR_SUBNET3 12
+#define EEPROM_ADDR_SUBNET4 13
+#define EEPROM_ADDR_WARN 14
 volatile uint8_t mute_counter_ = 0;
 uint8_t bell_std_mute_duration_ = 30;
 float temperature[MAX_TEMP_SENSORS] = {-9999, -9999};
@@ -109,10 +117,6 @@ void muteButtonPressed()
 }
 
 void setup() {
-  // start the Ethernet connection and the server:
-  Ethernet.begin(mac, ip);
-  server.begin();
-
   // initalize the  data ready and chip select pins: 
   pinMode(PIN_BELL, OUTPUT);
   digitalWrite(PIN_BELL, LOW);
@@ -123,6 +127,7 @@ void setup() {
   attachInterrupt(0, muteButtonPressed, FALLING);  //PIN2 should be Interrupt 0
 
   Serial.begin(9600);
+  Serial.setTimeout(100); //import for strings to come in all at once
 
   if (eeprom_read_byte(EEPROM_ADDR_VERS) == EEPROM_CURRENT_VERSION) {
     bell_std_mute_duration_ = (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_BELLMUTEDUR);
@@ -130,6 +135,18 @@ void setup() {
   } else {
     eeprom_write_block((void*)&warnabove_threshold, (void*)EEPROM_ADDR_WARN, sizeof(float)*MAX_TEMP_SENSORS);
     eeprom_write_byte((uint8_t *) EEPROM_ADDR_BELLMUTEDUR, bell_std_mute_duration_);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_IP1, 192);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_IP2, 168);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_IP3, 127);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_IP4, 244);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_GW1, 192);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_GW2, 168);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_GW3, 127);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_GW4, 254);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_SUBNET1, 255);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_SUBNET2, 255);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_SUBNET3, 255);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_SUBNET4, 0);
     eeprom_write_byte((uint8_t *) EEPROM_ADDR_VERS, EEPROM_CURRENT_VERSION);
   }
 
@@ -141,6 +158,23 @@ void setup() {
   lcd.print(F("(c) 2015            "));
   lcd.print(F("         Temp Sensor"));
   lcd.print(F(" Bernhard Tittelbach"));
+
+  // assign an IP address for the controller:
+  IPAddress ip((uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_IP1),
+               (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_IP2),
+               (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_IP3),
+               (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_IP4));
+  IPAddress gateway((uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_GW1),
+                    (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_GW2),
+                    (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_GW3),
+                    (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_GW4));
+  IPAddress subnet((uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_SUBNET1),
+                   (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_SUBNET2),
+                   (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_SUBNET3),
+                   (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_SUBNET4));
+  // start the Ethernet connection and the server:
+  Ethernet.begin(mac, ip, gateway, subnet);
+  server.begin();
 
   // give the sensor and Ethernet shield time to set up:
   delay(3000);
@@ -164,6 +198,37 @@ void loop() {
 
   // listen for incoming Ethernet connections:
   listenForEthernetClients();
+  serialReadConfigureIP();
+}
+
+//update network config:
+//echo -n ip:\xXX\xXX\xXX\xXX. > /dev/ttyUSB0
+//echo -n gw:\xXX\xXX\xXX\xXX. > /dev/ttyUSB0
+//echo -n nm:\xXX\xXX\xXX\xXX. > /dev/ttyUSB0
+void serialReadConfigureIP() {
+  uint8_t serbuff[4] = {0,0,0,0};
+  if (!Serial.available())
+    return;
+  uint8_t n = Serial.readBytesUntil(':', (char*) serbuff, 3);
+  void* targetaddr = 0;
+  if (n == 3 && strncmp((char*) serbuff, "ip:", 3) == 0)
+  {
+    targetaddr = (void*) EEPROM_ADDR_IP1;
+  } else if (n == 3 && strncmp((char*) serbuff, "gw:", 3) == 0)
+  {
+    targetaddr = (void*) EEPROM_ADDR_GW1;
+  } else if (n == 3 && strncmp((char*) serbuff, "nm:", 3) == 0)
+  {
+    targetaddr = (void*) EEPROM_ADDR_SUBNET1;
+  }
+  if (!Serial.available())
+    return;
+  if (targetaddr == 0)
+    return;
+  n = Serial.readBytes((char*) serbuff,4);
+  if (n == 4 && Serial.available() && Serial.read() == '.') {
+    eeprom_update_block((void*)serbuff, targetaddr, 4);
+  }
 }
 
 void checkTempAndWarn() {
