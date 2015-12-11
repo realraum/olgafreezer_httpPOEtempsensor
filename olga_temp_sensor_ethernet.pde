@@ -1,7 +1,8 @@
 #include <avr/eeprom.h>
+#include <avr/wdt.h>
 #include <SPI.h>         // needed for Arduino versions later than 0018
-#include <Ethernet.h>
-// the sensor communicates using SPI, so include the library:
+#include <UIPEthernet.h>
+// the sensor communicates using 1W, so include the library:
 #include <OneWire.h>
 #define lcd_20X4 // Define this if you have a 20 X 4 display.
 #include <LiquidCrystal.h>
@@ -117,14 +118,12 @@ void muteButtonPressed()
 }
 
 void setup() {
+  //wdt_enable(WDTO_120MS * 10);
   // initalize the  data ready and chip select pins: 
   pinMode(PIN_BELL, OUTPUT);
   digitalWrite(PIN_BELL, LOW);
   pinMode(PIN_MUTEBUTTON, INPUT);
   digitalWrite(PIN_MUTEBUTTON, HIGH); //pullup
-
-  //attachInterrupt(digitalPinToInterrupt(PIN_MUTEBUTTON), muteButtonPressed, FALLING);
-  attachInterrupt(0, muteButtonPressed, FALLING);  //PIN2 should be Interrupt 0
 
   Serial.begin(9600);
   Serial.setTimeout(100); //import for strings to come in all at once
@@ -152,13 +151,6 @@ void setup() {
 
   oneWireSearchAndStartConversion();
 
-  lcd.begin(20, 4);
-  lcd.clear();
-  lcd.print(F("OLGA Fridge         "));
-  lcd.print(F("(c) 2015            "));
-  lcd.print(F("         Temp Sensor"));
-  lcd.print(F(" Bernhard Tittelbach"));
-
   // assign an IP address for the controller:
   IPAddress ip((uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_IP1),
                (uint8_t) eeprom_read_byte((uint8_t *) EEPROM_ADDR_IP2),
@@ -176,8 +168,18 @@ void setup() {
   Ethernet.begin(mac, ip, gateway, subnet);
   server.begin();
 
+  lcd.begin(20, 4);
+  lcd.clear();
+  lcd.print(F("OLGA Freezer        "));
+  lcd.print(F("(c) 2015            "));
+  lcd.print(F("         Temp Sensor"));
+  lcd.print(F(" Bernhard Tittelbach"));
+
   // give the sensor and Ethernet shield time to set up:
   delay(3000);
+
+  //attachInterrupt(digitalPinToInterrupt(PIN_MUTEBUTTON), muteButtonPressed, FALLING);
+  attachInterrupt(0, muteButtonPressed, FALLING);  //PIN2 should be Interrupt 0
 
   init_big_font(&lcd);
 }
@@ -195,6 +197,7 @@ void loop() {
     }
     lastReadingTime = millis();
   }
+  //wdt_reset();
 
   // listen for incoming Ethernet connections:
   listenForEthernetClients();
