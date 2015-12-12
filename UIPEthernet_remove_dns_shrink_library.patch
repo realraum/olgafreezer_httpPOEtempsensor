@@ -1,0 +1,158 @@
+From e073dd7c626e4b376954f369916991ef1163027b Mon Sep 17 00:00:00 2001
+From: Bernhard Tittelbach <bernhard@tittelbach.org>
+Date: Sat, 12 Dec 2015 13:51:40 +0100
+Subject: remove DNS, shrink library
+
+
+diff --git a/UIPClient.cpp b/UIPClient.cpp
+index d199cfe..2420a36 100644
+--- a/UIPClient.cpp
++++ b/UIPClient.cpp
+@@ -90,14 +90,14 @@ UIPClient::connect(const char *host, uint16_t port)
+   // Look up the host first
+   int ret = 0;
+ #if UIP_UDP
+-  DNSClient dns;
++  // DNSClient dns;
+   IPAddress remote_addr;
+ 
+-  dns.begin(UIPEthernetClass::_dnsServerAddress);
+-  ret = dns.getHostByName(host, remote_addr);
+-  if (ret == 1) {
+-    return connect(remote_addr, port);
+-  }
++  // dns.begin(UIPEthernetClass::_dnsServerAddress);
++  // ret = dns.getHostByName(host, remote_addr);
++  // if (ret == 1) {
++    // return connect(remote_addr, port);
++  // }
+ #endif
+   return ret;
+ }
+diff --git a/UIPEthernet.cpp b/UIPEthernet.cpp
+index 91ec70a..c2ae9e0 100644
+--- a/UIPEthernet.cpp
++++ b/UIPEthernet.cpp
+@@ -42,8 +42,8 @@ memhandle UIPEthernetClass::uip_packet(NOBLOCK);
+ uint8_t UIPEthernetClass::uip_hdrlen(0);
+ uint8_t UIPEthernetClass::packetstate(0);
+ 
+-IPAddress UIPEthernetClass::_dnsServerAddress;
+-DhcpClass* UIPEthernetClass::_dhcp(NULL);
++// IPAddress UIPEthernetClass::_dnsServerAddress;
++// DhcpClass* UIPEthernetClass::_dhcp(NULL);
+ 
+ unsigned long UIPEthernetClass::periodic_timer;
+ 
+@@ -110,23 +110,23 @@ int UIPEthernetClass::maintain(){
+   tick();
+   int rc = DHCP_CHECK_NONE;
+ #if UIP_UDP
+-  if(_dhcp != NULL){
+-    //we have a pointer to dhcp, use it
+-    rc = _dhcp->checkLease();
+-    switch ( rc ){
+-      case DHCP_CHECK_NONE:
+-        //nothing done
+-        break;
+-      case DHCP_CHECK_RENEW_OK:
+-      case DHCP_CHECK_REBIND_OK:
+-        //we might have got a new IP.
+-        configure(_dhcp->getLocalIp(),_dhcp->getDnsServerIp(),_dhcp->getGatewayIp(),_dhcp->getSubnetMask());
+-        break;
+-      default:
+-        //this is actually a error, it will retry though
+-        break;
+-    }
+-  }
++  // if(_dhcp != NULL){
++  //   //we have a pointer to dhcp, use it
++  //   rc = _dhcp->checkLease();
++  //   switch ( rc ){
++  //     case DHCP_CHECK_NONE:
++  //       //nothing done
++  //       break;
++  //     case DHCP_CHECK_RENEW_OK:
++  //     case DHCP_CHECK_REBIND_OK:
++  //       //we might have got a new IP.
++  //       configure(_dhcp->getLocalIp(),_dhcp->getDnsServerIp(),_dhcp->getGatewayIp(),_dhcp->getSubnetMask());
++  //       break;
++  //     default:
++  //       //this is actually a error, it will retry though
++  //       break;
++  //   }
++  // }
+   return rc;
+ #endif
+ }
+@@ -155,10 +155,10 @@ IPAddress UIPEthernetClass::gatewayIP()
+   return ip_addr_uip(a);
+ }
+ 
+-IPAddress UIPEthernetClass::dnsServerIP()
+-{
+-  return _dnsServerAddress;
+-}
++// IPAddress UIPEthernetClass::dnsServerIP()
++// {
++//   return _dnsServerAddress;
++// }
+ 
+ void
+ UIPEthernetClass::tick()
+@@ -336,7 +336,7 @@ void UIPEthernetClass::configure(IPAddress ip, IPAddress dns, IPAddress gateway,
+   uip_ip_addr(ipaddr, subnet);
+   uip_setnetmask(ipaddr);
+ 
+-  _dnsServerAddress = dns;
++  // _dnsServerAddress = dns;
+ }
+ 
+ UIPEthernetClass UIPEthernet;
+diff --git a/UIPEthernet.h b/UIPEthernet.h
+index c68d578..70c1224 100644
+--- a/UIPEthernet.h
++++ b/UIPEthernet.h
+@@ -79,7 +79,7 @@ public:
+   IPAddress localIP();
+   IPAddress subnetMask();
+   IPAddress gatewayIP();
+-  IPAddress dnsServerIP();
++  // IPAddress dnsServerIP();
+ 
+ private:
+   static memhandle in_packet;
+@@ -87,7 +87,7 @@ private:
+   static uint8_t uip_hdrlen;
+   static uint8_t packetstate;
+   
+-  static IPAddress _dnsServerAddress;
++  // static IPAddress _dnsServerAddress;
+   static DhcpClass* _dhcp;
+ 
+   static unsigned long periodic_timer;
+diff --git a/UIPUdp.cpp b/UIPUdp.cpp
+index 3deb2c4..c9024df 100644
+--- a/UIPUdp.cpp
++++ b/UIPUdp.cpp
+@@ -151,13 +151,13 @@ UIPUDP::beginPacket(const char *host, uint16_t port)
+   DNSClient dns;
+   IPAddress remote_addr;
+ 
+-  dns.begin(UIPEthernet.dnsServerIP());
+-  ret = dns.getHostByName(host, remote_addr);
+-  if (ret == 1) {
+-    return beginPacket(remote_addr, port);
+-  } else {
+-    return ret;
+-  }
++  // dns.begin(UIPEthernet.dnsServerIP());
++  // ret = dns.getHostByName(host, remote_addr);
++  // if (ret == 1) {
++    // return beginPacket(remote_addr, port);
++  // } else {
++    // return ret;
++  // }
+ }
+ 
+ // Finish off this packet and send it
