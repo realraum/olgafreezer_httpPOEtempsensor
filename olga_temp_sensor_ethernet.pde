@@ -497,7 +497,7 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
     if (!(tid >= 0 && tid < MAX_TEMP_SENSORS))
       return;
     nexttok = strtok(NULL, pQueryDelimiters);
-    if (strncmp(nexttok, "warnabove=", 10) == 0)
+    if (strncmp(nexttok, "WarnAbove=", 10) == 0)
     {
       nexttok = strtok(nexttok+10, pQueryDelimiters);
       if (strncmp(nexttok, "off", 3) == 0)
