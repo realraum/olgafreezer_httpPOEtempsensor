@@ -80,6 +80,7 @@ byte readingMode = 0;
 #define BELL_FORCEOFF -1
 #define BELL_FORCEON 1
 volatile int8_t bellMode_ = 0;
+float warnabove_threshold_complement[MAX_TEMP_SENSORS];
 
 
 char *ftoa(char *a, double f, int precision)
@@ -113,6 +114,26 @@ void eeprom_update_block (const void *__src, void *__dst, size_t __n)
     if (testbyte != *_mySrcPtr)
       eeprom_write_byte(_myDstPtr, *_mySrcPtr);
     _myDstPtr++, _mySrcPtr++;
+  }
+}
+
+union bitfloat {
+  float f;
+  uint32_t i;
+};
+
+void complementFloat(float *ptr1, float *complement)
+{
+  uint32_t complement32 = 0xffffffff ^ ((bitfloat*)ptr1)->i;
+  *complement = ((bitfloat*) &complement32)->f;
+}
+
+void complementCheckFloat(float *ptr1, float *complement)
+{
+  uint32_t checksum = ((bitfloat*)ptr1)->i ^ ((bitfloat*)complement)->i ^ 0xffffffff;
+  if ( checksum > 0 )
+  {
+      RESET();
   }
 }
 
@@ -158,6 +179,8 @@ void setup() {
     eeprom_write_byte((uint8_t *) EEPROM_ADDR_SUBNET4, 0);
     eeprom_write_byte((uint8_t *) EEPROM_ADDR_VERS, EEPROM_CURRENT_VERSION);
   }
+  for (uint8_t c=0; c<MAX_TEMP_SENSORS; c++)
+    complementFloat(&warnabove_threshold[c], &warnabove_threshold_complement[c]);
 
   oneWireSearchAndStartConversion();
 
@@ -210,6 +233,10 @@ void loop() {
   }
   wdt_reset(); //pat the dog
 
+  //check for integrity of variables
+  for (uint8_t c=0; c<MAX_TEMP_SENSORS; c++)
+    complementCheckFloat(&warnabove_threshold[c], &warnabove_threshold_complement[c]);
+
   // listen for incoming Ethernet connections:
   listenForEthernetClients();
   serialReadConfigureIP();
@@ -234,6 +261,9 @@ void serialReadConfigureIP() {
   } else if (n == 3 && strncmp((char*) serbuff, "nm:", 3) == 0)
   {
     targetaddr = (void*) EEPROM_ADDR_SUBNET1;
+  } else if (n == 3 && strncmp((char*) serbuff, "rs:", 3) == 0)
+  {
+    RESET();
   }
   if (!Serial.available())
     return;
@@ -528,6 +558,7 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
       {
         warnabove_threshold[tid] = atof(nexttok);
       }
+      complementFloat(&warnabove_threshold[tid],&warnabove_threshold_complement[tid]);
       eeprom_update_block((void*)&warnabove_threshold, (void*)EEPROM_ADDR_WARN, sizeof(float)*MAX_TEMP_SENSORS);
     }
   }
