@@ -14,7 +14,6 @@
   -> danach geht es aber wieder
 (done) ?bell=on only works till next check where bell is switched off if alarm==false
 (done) ?busid=.&warnabove=-10 geht nicht, weil der Wert in welchen atoi gelesen wird, ein unsigned ist ---> needs firmwareupdate
-* Delay... Erst warnen wenn Temp für x Sekunden überschritten wurde
 (done) Alarm für 15s pausieren, wenn Tendenz bereits wieder in die richtige Richtung geht
 (done) Leutet einmal Kurz beim Einschalten.. Warum??
 (done) startet manchmal nicht, LCD schwarz/weiß. Strom zu beginn??* startet manchmal nicht, LCD schwarz/weiß. Strom zu beginn????
@@ -22,11 +21,9 @@
   -> Ersetzt durch ENC28J60
   -> damit ist von der ursprünglichen Hardware, die ich "verbrauchen" wollte, was überhaupt der Grund einen Arduino zu verwenden, nix mehr übrig... super
 (done) Halterung für T68 Unterseite Regal 3D drucken
-
-* Neuer Seeeduino geht in Brownout und resettet wenn die Glocke Strom von VIN zieht. 
-
+* Klingel durch Summer ersetzen. Shield neumachen, ordentlich layouten.
 
 * SOFTWAREBUG: zu viele wget anfragen (oder auch ping???) führen dazu dass das Ding einfriert -->
   -> watchdog
   -> mirror variablen schreiben/lesen und resetten wenn daten nicht als XOR zusammenpassen
-  -> http code nach bugs durchsuchen
+  -> (fixed) http code nach bugs durchsuchen
