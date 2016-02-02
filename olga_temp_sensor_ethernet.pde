@@ -28,7 +28,7 @@
 */
 
 #define PIN_BELL 8
-#define QBUF_LEN 128
+#define QBUF_LEN 96
 #define PIN_MUTEBUTTON 2
 
 //LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
