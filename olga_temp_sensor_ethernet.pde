@@ -420,22 +420,17 @@ void getNextHttpLine(EthernetClient & client, char readBuffer[QBUF_LEN])
   char c;
   int bufindex = 0; // reset buffer
 
-  // reading next header of HTTP request
-  if (client.connected() && client.available())
+  while (client.connected() && client.available() && bufindex < QBUF_LEN-1)
   {
-    // read a line terminated by CRLF
-    readBuffer[0] = client.read();
-    readBuffer[1] = client.read();
-    bufindex = 2;
-    for (int i = 2; readBuffer[i - 2] != '\r' && readBuffer[i - 1] != '\n'; ++i)
+    if (bufindex >= 1 && readBuffer[bufindex-1] == '\r' && readBuffer[bufindex] == '\n')
     {
-      // read full line and save it in buffer, up to the buffer size
-      c = client.read();
-      if (bufindex < QBUF_LEN)
-        readBuffer[bufindex++] = c;
+      readBuffer[bufindex-1] = 0;
+      break;
     }
-    readBuffer[bufindex - 2] = 0;  // Null string terminator overwrites '\r'
+    bufindex++;
+    readBuffer[bufindex] = client.read();
   }
+  readBuffer[bufindex] = 0; //Null terminate string no matter what came before. mostly this will overwrite '\n'
 }
 
 // Read the first line of the HTTP request, setting Uri Index and returning the method type.
@@ -456,7 +451,7 @@ char* readRequestLine(EthernetClient & client, char readBuffer[QBUF_LEN], char r
   char * pQuery   = strtok(NULL, "?");
   if (pQuery != NULL)
   {
-    strcpy(requestContent, pQuery);
+    strncpy(requestContent, pQuery, QBUF_LEN-1);
     // The '+' encodes for a space, so decode it within the string
     for (pQuery = requestContent; (pQuery = strchr(pQuery, '+')) != NULL; )
       *pQuery = ' ';    // Found a '+' so replace with a space
@@ -563,7 +558,8 @@ void httpReplyTempValuesJson(EthernetClient & client) {
   client.println(F("}}"));
 }
 
-void listenForEthernetClients() {
+void listenForEthernetClients()
+{
   // listen for incoming clients
   EthernetClient client = server.available();
   if (client) {
@@ -603,6 +599,5 @@ void listenForEthernetClients() {
     // close the connection:
     client.stop();
   }
-} 
-
+}
 
