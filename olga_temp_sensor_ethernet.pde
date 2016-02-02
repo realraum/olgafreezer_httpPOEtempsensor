@@ -92,6 +92,12 @@ char *ftoa(char *a, double f, int precision)
  return ret;
 }
 
+void RESET(void)
+{
+  wdt_enable(WDTO_15MS);
+  while(1);
+}
+
 void eeprom_update_block (const void *__src, void *__dst, size_t __n)
 {
   byte testbyte;
