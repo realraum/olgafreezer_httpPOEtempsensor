@@ -581,8 +581,8 @@ void listenForEthernetClients()
   EthernetClient client = server.available();
   if (client) {
     // Serial.println("Got a client");
-    // an http request ends with a blank line
-    boolean currentLineIsBlank = true;
+    // an http request ends with \r\n\r\n (aka one blank line)
+    boolean currentLineIsBlank = false;
     uint8_t linenum = 0;
     char reqBuf[QBUF_LEN];
     char inpBuf[QBUF_LEN];
