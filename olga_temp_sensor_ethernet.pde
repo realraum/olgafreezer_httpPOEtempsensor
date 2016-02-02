@@ -64,10 +64,14 @@ OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 #define EEPROM_ADDR_SUBNET3 12
 #define EEPROM_ADDR_SUBNET4 13
 #define EEPROM_ADDR_WARN 14
+
+#define TEMP_INVALID -9999
+#define TEMPWARN_OFF 9999
+
 volatile uint8_t mute_counter_ = 0;
 uint8_t bell_std_mute_duration_ = 30;
-float temperature[MAX_TEMP_SENSORS] = {-9999, -9999};
-float warnabove_threshold[MAX_TEMP_SENSORS] = {9999, 9999};
+float temperature[MAX_TEMP_SENSORS] = {TEMP_INVALID, TEMP_INVALID};
+float warnabove_threshold[MAX_TEMP_SENSORS] = {TEMPWARN_OFF, TEMPWARN_OFF};
 char const *sensornames[2] = {"OLGA freezer","OLGA room"};
 uint8_t temp_sensor_id = -1;
 long lastReadingTime = 0;
@@ -248,7 +252,7 @@ void checkTempAndWarn() {
   else if (bellMode_ == BELL_FORCEOFF)
     warn=false;
   else for (uint8_t tid=0; tid < MAX_TEMP_SENSORS; tid++) {
-    if (temperature[tid] != -9999 && temperature[tid] > warnabove_threshold[tid])
+    if (temperature[tid] != TEMP_INVALID && temperature[tid] > warnabove_threshold[tid])
       warn=true;
   }
 
@@ -280,7 +284,7 @@ void displayTempOnLCD() {
   lcd.print(F(":"));
   lcd.print(sensornames[temp_sensor_id]);
   lcd.setCursor(0,1);
-  if (temperature[temp_sensor_id] != -9999 && temperature[temp_sensor_id] > warnabove_threshold[temp_sensor_id])
+  if (temperature[temp_sensor_id] != TEMP_INVALID && temperature[temp_sensor_id] > warnabove_threshold[temp_sensor_id])
   {
     if (mute_counter_ > 0)
     {
@@ -292,7 +296,7 @@ void displayTempOnLCD() {
   } else
   {
     lcd.print(F("Alarm "));
-    if (warnabove_threshold[temp_sensor_id] == 9999) {
+    if (warnabove_threshold[temp_sensor_id] == TEMPWARN_OFF) {
       lcd.print(F("OFF"));
     } else {
       lcd.print(F("@"));
@@ -326,7 +330,7 @@ byte oneWireSearchAndStartConversion() {
   // }
 
   if (OneWire::crc8(addr, 7) != addr[7]) {
-    temperature[temp_sensor_id] = -9999;
+    temperature[temp_sensor_id] = TEMP_INVALID;
     // Serial.println("CRC is not valid!");
     return 0;
   }
@@ -452,6 +456,7 @@ char* readRequestLine(EthernetClient & client, char readBuffer[QBUF_LEN], char r
   if (pQuery != NULL)
   {
     strncpy(requestContent, pQuery, QBUF_LEN-1);
+    requestContent[QBUF_LEN-1] = 0; //in case strncpy ran into maximum before finding \0. Should not happen though since strtok returns \0 terminated strings
     // The '+' encodes for a space, so decode it within the string
     for (pQuery = requestContent; (pQuery = strchr(pQuery, '+')) != NULL; )
       *pQuery = ' ';    // Found a '+' so replace with a space
@@ -459,7 +464,7 @@ char* readRequestLine(EthernetClient & client, char readBuffer[QBUF_LEN], char r
 //    Serial.print("Get query string: ");
 //    Serial.println(requestContent);
   }
-  return pUri;
+  return pUri; //only valid as long as readBuffer is valid
 }
 
 void actOnRequestContent(char requestContent[QBUF_LEN])
@@ -467,7 +472,9 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
   // Serial.print("actOnRequestContent\n");
   // Serial.print(requestContent);
   uint8_t tid=MAX_TEMP_SENSORS;
-  int16_t wathint = 9999;
+  int16_t wathint = TEMPWARN_OFF;
+  if (requestContent[0] == 0)
+    return;
   if (strncmp(requestContent, "bell=", 5) == 0)
   {
     if ( strncmp(requestContent + 5, "on", 2) == 0 )
@@ -488,28 +495,38 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
     }
   } else if (strncmp(requestContent, "mutedur=", 13) == 0)
   {
+    //"ok" since requestContent go zeroed out and is null terminated at the end for sure
+    // assert QBUF_LEN > 13
     char* nexttok = strtok(requestContent+13, pQueryDelimiters);
+    if (nexttok == NULL)
+      return;
     bell_std_mute_duration_ = (uint8_t) atoi(nexttok);
   } else if (strncmp(requestContent, "busid=", 6) == 0)
   {
     char* nexttok = strtok(requestContent+6, pQueryDelimiters);
+    if (nexttok == NULL)
+      return;
     tid = atoi(nexttok);
     if (!(tid >= 0 && tid < MAX_TEMP_SENSORS))
       return;
     nexttok = strtok(NULL, pQueryDelimiters);
+    if (nexttok == NULL)
+      return;
+    //Important to have gotten tid BEFORE WarnAbove
     if (strncmp(nexttok, "WarnAbove=", 10) == 0)
     {
       nexttok = strtok(nexttok+10, pQueryDelimiters);
+      if (nexttok == NULL)
+        return;
       if (strncmp(nexttok, "off", 3) == 0)
       {
-        warnabove_threshold[tid] = 9999;
+        warnabove_threshold[tid] = TEMPWARN_OFF;
       } else
       {
         wathint = atoi(nexttok);
         warnabove_threshold[tid] = (float) wathint;
       }
       eeprom_update_block((void*)&warnabove_threshold, (void*)EEPROM_ADDR_WARN, sizeof(float)*MAX_TEMP_SENSORS);
-
     }
   }
 }
@@ -525,7 +542,7 @@ void httpReplyTempValuesJson(EthernetClient & client) {
   client.print(F("{\"sensors\":["));
   for (uint8_t tid=0; tid < MAX_TEMP_SENSORS; tid++) {
     client.print(F("{\"temp\": "));
-    if (temperature[tid] == -9999) {
+    if (temperature[tid] == TEMP_INVALID) {
       client.print(F("\"INVALID\""));
     } else {
       client.print(temperature[tid]);
@@ -533,7 +550,7 @@ void httpReplyTempValuesJson(EthernetClient & client) {
     client.print(F(",\"busid\":"));
     client.print(tid);
     client.print(F(", \"warnabove\":"));
-    if (warnabove_threshold[tid] == 9999) {
+    if (warnabove_threshold[tid] == TEMPWARN_OFF) {
       client.print(F("\"OFF\""));
     } else {
       client.print(warnabove_threshold[tid]);
