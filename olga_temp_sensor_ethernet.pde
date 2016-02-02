@@ -192,6 +192,7 @@ void setup() {
   attachInterrupt(0, muteButtonPressed, FALLING);  //PIN2 should be Interrupt 0
 
   init_big_font(&lcd);
+  wdt_enable(WDTO_4S); //enable watchdog, reset if dog was not patted after 4seconds
 }
 
 void loop() { 
@@ -207,7 +208,7 @@ void loop() {
     }
     lastReadingTime = millis();
   }
-  //wdt_reset();
+  wdt_reset(); //pat the dog
 
   // listen for incoming Ethernet connections:
   listenForEthernetClients();
