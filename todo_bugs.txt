@@ -23,7 +23,7 @@
 (done) Halterung für T68 Unterseite Regal 3D drucken
 * Klingel durch Summer ersetzen. Shield neumachen, ordentlich layouten.
 
-* SOFTWAREBUG: zu viele wget anfragen (oder auch ping???) führen dazu dass das Ding einfriert -->
-  -> watchdog
-  -> mirror variablen schreiben/lesen und resetten wenn daten nicht als XOR zusammenpassen
+(done?) SOFTWAREBUG: zu viele wget anfragen (oder auch ping???) führen dazu dass das Ding einfriert -->
+  -> (done) watchdog
+  -> (done) mirror variablen schreiben/lesen und resetten wenn daten nicht als XOR zusammenpassen
   -> (fixed) http code nach bugs durchsuchen
