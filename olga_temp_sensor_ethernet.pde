@@ -422,18 +422,20 @@ char *pStxDelimiter = "\002";    // STX - ASCII start of text character
 ***********************************************************************************************************************/
 void getNextHttpLine(EthernetClient & client, char readBuffer[QBUF_LEN])
 {
-  char c;
   int bufindex = 0; // reset buffer
 
-  while (client.connected() && client.available() && bufindex < QBUF_LEN-1)
+  if (!client.connected())
+    return;
+
+  while (bufindex < QBUF_LEN-1 && client.available() > 0)
   {
     if (bufindex >= 1 && readBuffer[bufindex-1] == '\r' && readBuffer[bufindex] == '\n')
     {
       readBuffer[bufindex-1] = 0;
       break;
     }
+    readBuffer[bufindex] = (char) client.read();
     bufindex++;
-    readBuffer[bufindex] = client.read();
   }
   readBuffer[bufindex] = 0; //Null terminate string no matter what came before. mostly this will overwrite '\n'
 }
@@ -473,7 +475,6 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
   // Serial.print("actOnRequestContent\n");
   // Serial.print(requestContent);
   uint8_t tid=MAX_TEMP_SENSORS;
-  int16_t wathint = TEMPWARN_OFF;
   if (requestContent[0] == 0)
     return;
   if (strncmp(requestContent, "bell=", 5) == 0)
@@ -494,14 +495,15 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
       mute_counter_ = 0;
       //bell is controlled by checkTempAndWarn()
     }
-  } else if (strncmp(requestContent, "mutedur=", 13) == 0)
+  } else if (strncmp(requestContent, "mutedur=", 8) == 0)
   {
     //"ok" since requestContent go zeroed out and is null terminated at the end for sure
     // assert QBUF_LEN > 13
-    char* nexttok = strtok(requestContent+13, pQueryDelimiters);
+    char* nexttok = strtok(requestContent+8, pQueryDelimiters);
     if (nexttok == NULL)
       return;
     bell_std_mute_duration_ = (uint8_t) atoi(nexttok);
+    eeprom_write_byte((uint8_t *) EEPROM_ADDR_BELLMUTEDUR, bell_std_mute_duration_);
   } else if (strncmp(requestContent, "busid=", 6) == 0)
   {
     char* nexttok = strtok(requestContent+6, pQueryDelimiters);
@@ -524,8 +526,7 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
         warnabove_threshold[tid] = TEMPWARN_OFF;
       } else
       {
-        wathint = atoi(nexttok);
-        warnabove_threshold[tid] = (float) wathint;
+        warnabove_threshold[tid] = atof(nexttok);
       }
       eeprom_update_block((void*)&warnabove_threshold, (void*)EEPROM_ADDR_WARN, sizeof(float)*MAX_TEMP_SENSORS);
     }
@@ -590,6 +591,8 @@ void listenForEthernetClients()
     memset(reqBuf,0,QBUF_LEN);
     memset(inpBuf,0,QBUF_LEN);
     readRequestLine(client, inpBuf, reqBuf);
+    // Serial.print("reqBuf:");
+    // Serial.println(reqBuf);
     actOnRequestContent(reqBuf);
     while (client.connected()) {
       if (client.available()) {
