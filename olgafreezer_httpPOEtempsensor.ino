@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <avr/eeprom.h>
 #include <avr/wdt.h>
 #include <SPI.h>         // needed for Arduino versions later than 0018
@@ -6,16 +7,19 @@
 #include <OneWire.h>
 #define lcd_20X4 // Define this if you have a 20 X 4 display.
 #include <LiquidCrystal.h>
-#include <phi_big_font.h>
+#include <BigCrystal.h>
 
 /*
+ * running on a Seeduino
+ * programm as Genuino UNO
+ * 
 ^ PIN ^ Function       ^
 |  13 | Ethernet / SPI |
 |  12 | Ethernet / SPI |
 |  11 | Ethernet / SPI |
 |  10 | Ethernet / SPI |
 |  9  | Onewire Temp Sensors DQ |
-|  8  | NPN Transistor controlling Alarm Bell |
+|  8  | NPN Transistor controlling Alarm Sound |
 |  0  | Serial RX, Shared with FTDI |
 |  1  | Serial TX, Shared with FTDI |
 |  2  | Mute Button, connected via Button to GND |
@@ -32,7 +36,8 @@
 #define PIN_MUTEBUTTON 2
 
 //LiquidCrystal lcd(7, 6, 5, 4, 3, 2);
-LiquidCrystal lcd(A0, A1, A2, A3, A4, A5);
+LiquidCrystal llcd(A0, A1, A2, A3, A4, A5);
+BigCrystal lcd(&llcd);
 
 // assign a MAC address for the ethernet controller.
 // fill in your address here:
@@ -69,13 +74,14 @@ OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 #define TEMPWARN_OFF 9999
 
 volatile uint8_t mute_counter_ = 0;
-uint8_t bell_std_mute_duration_ = 30;
+uint8_t bell_std_mute_duration_ = 45;
 float temperature[MAX_TEMP_SENSORS] = {TEMP_INVALID, TEMP_INVALID};
 float warnabove_threshold[MAX_TEMP_SENSORS] = {TEMPWARN_OFF, TEMPWARN_OFF};
 char const *sensornames[2] = {"OLGA freezer","OLGA room"};
 uint8_t temp_sensor_id = -1;
 long lastReadingTime = 0;
 byte readingMode = 0;
+uint8_t bellbangcount = 0;
 #define BELL_ALARM 0
 #define BELL_FORCEOFF -1
 #define BELL_FORCEON 1
@@ -144,12 +150,11 @@ void muteButtonPressed()
     mute_counter_ = bell_std_mute_duration_;
     digitalWrite(PIN_BELL, LOW);
   }
-  lcd_clear();
+  lcd.clear();
   lcd.print(F("Mute Button Pressed"));
 }
 
 void setup() {
-  //wdt_enable(WDTO_120MS * 10);
   // initalize the  data ready and chip select pins: 
   pinMode(PIN_BELL, OUTPUT);
   digitalWrite(PIN_BELL, LOW);
@@ -214,7 +219,7 @@ void setup() {
   //attachInterrupt(digitalPinToInterrupt(PIN_MUTEBUTTON), muteButtonPressed, FALLING);
   attachInterrupt(0, muteButtonPressed, FALLING);  //PIN2 should be Interrupt 0
 
-  init_big_font(&lcd);
+  //init_big_font(&lcd);
   wdt_enable(WDTO_4S); //enable watchdog, reset if dog was not patted after 4seconds
 }
 
@@ -290,11 +295,15 @@ void checkTempAndWarn() {
   if (warn)
   {
     if (mute_counter_ > 0)
+    {
+      digitalWrite(PIN_BELL, LOW);
       mute_counter_--;
-    else
-      digitalWrite(PIN_BELL, HIGH);
-  } else
-  {
+    } else {
+      //make some non-continous sound
+      //digitalWrite(PIN_BELL, HIGH);
+      digitalWrite(PIN_BELL, not digitalRead(PIN_BELL));
+    }
+  } else {
     digitalWrite(PIN_BELL, LOW);
     mute_counter_ = 0;
   }
@@ -310,7 +319,7 @@ void displayTempOnLCD() {
   else
     ftoa(tmp,temperature[temp_sensor_id],2);
   tmp[5] = 0;
-  lcd_clear();
+  lcd.clear();
   lcd.print(temp_sensor_id);
   lcd.print(F(":"));
   lcd.print(sensornames[temp_sensor_id]);
@@ -334,9 +343,8 @@ void displayTempOnLCD() {
       lcd.print(warnabove_threshold[temp_sensor_id]);
     }
   }
-  render_big_msg("$C", 13,0);
-  render_big_msg(tmp, 0,2);
-  //render_big_msg("$C", 3,2);
+  lcd.printBig("'C", 15,0);
+  lcd.printBig(tmp, 0,2);
 }
 
 byte type_s;
