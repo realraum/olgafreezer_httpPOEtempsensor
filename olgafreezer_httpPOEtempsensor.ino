@@ -52,7 +52,7 @@ EthernetServer server(80);
 
 OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 
-#define MAX_TEMP_SENSORS 2
+#define MAX_TEMP_SENSORS 3
 #define EEPROM_CURRENT_VERSION 3
 #define EEPROM_ADDR_VERS 0
 #define EEPROM_ADDR_BELLMUTEDUR 1
@@ -68,6 +68,7 @@ OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 #define EEPROM_ADDR_SUBNET2 11
 #define EEPROM_ADDR_SUBNET3 12
 #define EEPROM_ADDR_SUBNET4 13
+// EEPROM_ADDR_WARN has variable size so needs to be last!!!
 #define EEPROM_ADDR_WARN 14
 
 #define TEMP_INVALID -9999
@@ -75,9 +76,9 @@ OneWire  ds(9);  // on pin 10 (a 4.7K resistor is necessary)
 
 volatile uint8_t mute_counter_ = 0;
 uint8_t bell_std_mute_duration_ = 45;
-float temperature[MAX_TEMP_SENSORS] = {TEMP_INVALID, TEMP_INVALID};
-float warnabove_threshold[MAX_TEMP_SENSORS] = {TEMPWARN_OFF, TEMPWARN_OFF};
-char const *sensornames[2] = {"OLGA freezer","OLGA room"};
+float temperature[MAX_TEMP_SENSORS] = {TEMP_INVALID, TEMP_INVALID, TEMP_INVALID};
+float warnabove_threshold[MAX_TEMP_SENSORS] = {TEMPWARN_OFF, TEMPWARN_OFF, TEMPWARN_OFF};
+char const *sensornames[MAX_TEMP_SENSORS] = {"OLGA freezer","Outside", "OLGA room"};
 uint8_t temp_sensor_id = -1;
 long lastReadingTime = 0;
 byte readingMode = 0;
@@ -311,7 +312,7 @@ void checkTempAndWarn() {
 
 void displayTempOnLCD() {
   char tmp[6];
-  if (! (temp_sensor_id >= 0 && temp_sensor_id < MAX_TEMP_SENSORS))
+  if (temp_sensor_id >= MAX_TEMP_SENSORS)
     return;
 
   if (temperature[temp_sensor_id] < 0)
@@ -343,7 +344,7 @@ void displayTempOnLCD() {
       lcd.print(warnabove_threshold[temp_sensor_id]);
     }
   }
-  lcd.printBig("'C", 15,0);
+  lcd.printBig((char*)"'C", 15,0);
   lcd.printBig(tmp, 0,2);
 }
 
@@ -351,7 +352,6 @@ byte type_s;
 byte addr[8];
 
 byte oneWireSearchAndStartConversion() {
-  byte i;
   if ( !ds.search(addr)) {
     // Serial.println("No more addresses.");
     // Serial.println();
@@ -403,11 +403,10 @@ byte oneWireSearchAndStartConversion() {
 // get data, 800ms after conversion started
 void getData() {
   byte i;
-  byte present = 0;
   byte data[12];
 
   // we might do a ds.depower() here, but the reset will take care of it.  
-  present = ds.reset();
+  ds.reset();
   ds.select(addr);    
   ds.write(0xBE);         // Read Scratchpad
 
@@ -442,7 +441,7 @@ void getData() {
     else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
     //// default is 12 bit resolution, 750 ms conversion time
   }
-  if (temp_sensor_id >= 0 && temp_sensor_id < MAX_TEMP_SENSORS)
+  if (temp_sensor_id < MAX_TEMP_SENSORS)
   {
     temperature[temp_sensor_id] = (float)raw / 16.0;
     // Serial.print("  Temperature = ");
@@ -451,9 +450,9 @@ void getData() {
   }
 }
 
-char *pSpDelimiters = " \r\n";
-char *pQueryDelimiters = "& \r\n";
-char *pStxDelimiter = "\002";    // STX - ASCII start of text character
+char *pSpDelimiters = (char*)" \r\n";
+char *pQueryDelimiters = (char*)"& \r\n";
+char *pStxDelimiter = (char*)"\002";    // STX - ASCII start of text character
 
 /**********************************************************************************************************************
 * Read the next HTTP header record which is CRLF delimited.  We replace CRLF with string terminating null.
@@ -548,7 +547,7 @@ void actOnRequestContent(char requestContent[QBUF_LEN])
     if (nexttok == NULL)
       return;
     tid = atoi(nexttok);
-    if (!(tid >= 0 && tid < MAX_TEMP_SENSORS))
+    if (!(tid < MAX_TEMP_SENSORS))
       return;
     nexttok = strtok(NULL, pQueryDelimiters);
     if (nexttok == NULL)
@@ -624,7 +623,6 @@ void listenForEthernetClients()
     // Serial.println("Got a client");
     // an http request ends with \r\n\r\n (aka one blank line)
     boolean currentLineIsBlank = false;
-    uint8_t linenum = 0;
     char reqBuf[QBUF_LEN];
     char inpBuf[QBUF_LEN];
     memset(reqBuf,0,QBUF_LEN);
